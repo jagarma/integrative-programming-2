@@ -7,30 +7,29 @@ use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
-    // View all employees + search + department filter
-    public function index(Request $request)
+    // GET - View all employees
+    public function index()
     {
-        $query = Employee::query();
-
-        // Search by first name or last name
-        if ($request->has('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter by department
-        if ($request->has('department')) {
-            $query->where('department', $request->department);
-        }
-
-        return response()->json($query->get(), 200);
+        return response()->json(Employee::all());
     }
 
-    // View one employee
+    // POST - Add a new employee
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|unique:employees,email',
+            'department' => 'required|string|max:100',
+            'position' => 'required|string|max:100',
+        ]);
+
+        $employee = Employee::create($validated);
+
+        return response()->json($employee, 201);
+    }
+
+    // GET - View one employee
     public function show($id)
     {
         $employee = Employee::find($id);
@@ -41,24 +40,10 @@ class EmployeeController extends Controller
             ], 404);
         }
 
-        return response()->json($employee, 200);
+        return response()->json($employee);
     }
 
-    // Add a new employee
-    public function store(Request $request)
-    {
-        $employee = Employee::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'department' => $request->department,
-            'position' => $request->position
-        ]);
-
-        return response()->json($employee, 201);
-    }
-
-    // Update employee information
+    // PUT - Update employee
     public function update(Request $request, $id)
     {
         $employee = Employee::find($id);
@@ -69,18 +54,20 @@ class EmployeeController extends Controller
             ], 404);
         }
 
-        $employee->update([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'department' => $request->department,
-            'position' => $request->position
+        $validated = $request->validate([
+            'first_name' => 'sometimes|string|max:100',
+            'last_name' => 'sometimes|string|max:100',
+            'email' => 'sometimes|email|unique:employees,email,' . $id,
+            'department' => 'sometimes|string|max:100',
+            'position' => 'sometimes|string|max:100',
         ]);
 
-        return response()->json($employee, 200);
+        $employee->update($validated);
+
+        return response()->json($employee);
     }
 
-    // Delete an employee
+    // DELETE - Delete employee
     public function destroy($id)
     {
         $employee = Employee::find($id);
@@ -95,6 +82,6 @@ class EmployeeController extends Controller
 
         return response()->json([
             'message' => 'Employee deleted successfully'
-        ], 200);
+        ]);
     }
 }
